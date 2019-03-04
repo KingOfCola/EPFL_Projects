@@ -1,0 +1,110 @@
+close 'all';
+
+colors = [1 0.6 0.6; 0.6 1 0.6;1 1 1];
+tL = [trainLabels; repmat([2], 125, 1)];
+dataColors = reshape(colors(tL + 1, :), length(tL), 1, 3);
+[~, tt] = ttest2(trainData(trainLabels == 1, :), trainData(trainLabels == 0, :));
+tt = -log(tt);
+tt = (tt - min(tt)) / (max(tt) - min(tt));
+td = (trainData - min(trainData, 1)) ./ (max(trainData, 1) - min(trainData, 1));
+data = [trainData; repmat(1,25,size(trainData,2)); repmat(tt, 100, 1)];
+figure()
+imshow(dataColors .* data);
+
+allGroceriesRavel = [];
+for i = 1:length(allGroceries)
+    allGroceriesRavel = [allGroceriesRavel; repmat(allGroceries(i), length(allGroceries(i).hyperParams), 1)];
+end
+index = zeros(outerFolds,1);
+scores = zeros(outerFolds, 1);
+methods = repmat("", outerFolds,1);
+scoresTrain = zeros(outerFolds, innerFolds, length(allGroceriesRavel));
+scoresValidation = zeros(outerFolds, innerFolds, length(allGroceriesRavel));
+for i=1:outerFolds
+    index(i) = results(i).Value.index;
+    scores(i) = results(i).Value.score;
+    scoresTrain(i, :, :) = results(i).Value.trainScores;
+    scoresValidation(i, :, :) = results(i).Value.validationScores;
+    %clfFactory = results(i).Value.factory.grocery.createClassifierFactory(dataTrain.train);
+    hyperParams = results(i).Value.factory.hyperParams;
+    methods(i) = allGroceriesRavel(index(i)).discrimType + " " + allGroceriesRavel(index(i)).method;
+end
+methodsSorted = sort(methods);
+method = methodsSorted(1);
+methodsUnique = [methodsSorted(1)];
+nbMethods = [1];
+j=1;
+for i=2:outerFolds
+    if methodsSorted(i) == method
+        nbMethods(j) = nbMethods(j) + 1;
+    else
+        nbMethods = [nbMethods, 1];
+        method = methodsSorted(i);
+        methodsUnique = [methodsUnique, method];
+        j = j +1;
+    end
+end
+figure()
+pie(nbMethods, {methodsUnique})
+scoresBP = zeros(outerFolds,innerFolds);
+labels = repmat("", outerFolds, 1);
+for i =1:outerFolds
+    scoresBP(i, :) = scoresValidation(i, :, index(i));
+    labels(i) = "Outer fold "+i;
+end
+figure()
+boxplot(scoresBP(:, :).', labels)
+xlabel("Outer fold")
+ylabel("Validation error on innerFolds")
+title("Validation errors for each fold")
+xtickangle(75);
+% 
+folds = 10;
+features = [1:5:100, 100:10:300];
+d.data = trainData;
+d.labels = trainLabels;
+scVals.trainScores = zeros(folds, length(features));
+scVals.validationScores = zeros(folds, length(features));
+scVals.scores = zeros(folds, length(features));
+scVals.ttest = zeros(folds, length(features));
+clfGrocery = classifier.classifierGrocery(@clfBank.pcaRankfeatPrepareDataFunFactory,clfBank.pcaRankfeatPrecomputedHyperParamsFun("fisher"),{"DiscrimType","diaglinear","prior","uniform"});
+resultsCross = validation.crossValidation(d,folds,@(dt)getBestNbFeatures(dt, features, clfGrocery));
+for i=1:folds
+    scVals.trainScores(i,:) = resultsCross(i).Value.trainScores;
+    scVals.validationScores(i,:) = resultsCross(i).Value.validationScores;
+    scVals.scores(i,:) = resultsCross(i).Value.scores;
+    scVals.ttest(i,:) = resultsCross(i).Value.ttest;
+end
+methodsAll = [];
+for i = 1:allGroceriesRavel
+    methodsAll = [methodsAll, allGroceriesRavel.
+end
+scVals.scoresAll = mean(scVals.scores,1);
+[scVals.score,scVals.index]=min(mean(scVals.scores,1));
+graph.plotCrossValidation(scVals,features,"CrossValidation");
+
+clfFactory = clfGrocery.createClassifierFactory(d);
+clf = clfFactory.createClassifier(d, features(scVals.index));
+predTest = clf.predict(testData)
+figure()
+semilogy(features, mean(scVals.ttest, 1));
+xlabel("Number of features");
+ylabel("p-Value");
+
+misc.labelToCSV(predTest, "test_21.csv", "results");
+
+function scores = getBestNbFeatures(data, features, clfGrocery)
+    scores.trainScores = zeros(length(features), 1);
+    scores.validationScores = zeros(length(features), 1);
+    scores.scores = zeros(length(features), 1);
+    scores.ttest = zeros(length(features), 1);
+    clfFactory = clfGrocery.createClassifierFactory(data.train);
+    for i = 1:length(features)
+        nbFeatures = features(i);
+        clf = clfFactory.createClassifier(data.train, nbFeatures);
+        [~, scores.ttest(i)] = ttest(abs(clf.predict(data.test.data)- data.test.labels), 0.5);
+        scores.validationScores(i) = score.classError(clf.predict(data.test.data), data.test.labels);
+        scores.trainScores(i) = score.classError(clf.predict(data.train.data), data.train.labels);
+        scores.scores(i) = (1 + nbFeatures / 400) * score.classError(clf.predict(data.test.data), data.test.labels);
+    end
+end

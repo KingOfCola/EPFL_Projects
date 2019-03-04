@@ -1,0 +1,33 @@
+library("ggplot2")
+
+# Importing data
+gene_exp <- read.table("data/genes_expression_100.txt", header=TRUE)
+
+# First plot
+plot(gene_exp)
+
+# ratio
+gene <- gene_exp["id"]
+gene["ratio"] <- log2(gene_exp["C2"] / gene_exp["C1"])
+gene["geom"] <- 0.5 * (log10(gene_exp["C2"]) +  log10(gene_exp["C1"]))
+
+# Plot
+ggplot(data = gene) + 
+  geom_point(mapping = aes(x = ratio, y = geom))
+
+# Label
+gene["label"] <- 0
+n = dim(gene["label"])[1]
+gene[(n/2):n, "label"] <- 1
+
+# Plot colored
+ggplot(data = gene) + 
+  geom_point(mapping = aes(x = ratio, y = geom, color= label))
+
+# factoring
+gene$label <- as.factor(gene$label)
+
+
+# Plot colored
+ggplot(data = gene) + 
+  geom_point(mapping = aes(x = ratio, y = geom, color= label))

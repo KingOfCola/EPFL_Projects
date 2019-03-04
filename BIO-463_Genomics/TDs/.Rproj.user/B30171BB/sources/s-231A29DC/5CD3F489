@@ -1,0 +1,29 @@
+{
+    "collab_server" : "",
+    "contents" : "",
+    "created" : 1550595168049.000,
+    "dirty" : false,
+    "encoding" : "",
+    "folds" : "",
+    "hash" : "0",
+    "id" : "5CD3F489",
+    "lastKnownWriteTime" : 32370120545140837,
+    "last_content_update" : 1550595168049,
+    "path" : null,
+    "project_path" : null,
+    "properties" : {
+        "cacheKey" : "441C7237",
+        "caption" : "gene",
+        "contentUrl" : "grid_resource/gridviewer.html?env=&obj=gene&cache_key=441C7237",
+        "displayedObservations" : "99",
+        "environment" : "",
+        "object" : "gene",
+        "preview" : "0",
+        "totalObservations" : "99",
+        "variables" : "4"
+    },
+    "relative_order" : 2,
+    "source_on_save" : false,
+    "source_window" : "",
+    "type" : "r_dataframe"
+}
